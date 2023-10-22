@@ -1,12 +1,20 @@
 classdef Experiment < handle
     properties
-        data %An array of either Position or Colony objects
-        metaData %appropriate metadata object.
-        processedImageDirectory
-        rawImageDirectory
-        experimentType % Standard (std) or micropattern (mp)
-        imageNameStruct
-        processingParameters %for storing image processing
+        data % An array of either Position or Colony objects
+        meta_data % appropriate metadata object.
+        maxpro_image_directory
+        raw_image_directory
+        experiment_type % Standard (std) or micropattern (mp)
+%         imageNameStruct
+        processing_parameters %for storing image processing
+        % added by Siqi
+        cond % condition string for each well
+        cond_idx % corresponding idx for condition
+        time % timepoint for each well (duration)
+        time_idx % corresponding idx for time
+        stain 
+        stain_idx
+        images_per_well
     end
     methods
         %constructor
@@ -15,7 +23,7 @@ classdef Experiment < handle
                 return;
             end
             if nargin == 1
-                this.rawImageDirectory = varargin{1};
+                this.raw_image_directory = varargin{1};
             end
         end
         %list methods here but functions are in separate files

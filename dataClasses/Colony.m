@@ -31,6 +31,10 @@ classdef Colony < Position
 
         %CM              % center of mass -> should use '.center'
         I               % second moments (inertia tensor)
+        
+        % added by Siqi
+        coordinate % corresponding [plateIdx, wellIdx, posIdx]
+        condition_idx % easier to process than condition as a string
     end
 
     properties (Dependent)

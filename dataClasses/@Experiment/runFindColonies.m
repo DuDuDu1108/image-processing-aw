@@ -1,35 +1,53 @@
-function runFindColonies(this,filenrs,prefix,ext)
+function runFindColonies(this,InputPath,varargin)
+%%
 
-if ~exist('prefix','var')
-    prefix = 'Colony';
+in_struct = varargin2parameter(varargin);
+
+
+if ~exist('InputPath','var')
+    InputPath = this.maxpro_image_directory;
 end
 
-if ~exist('ext','var')
-    ext = '.tif';
+
+FileExtension = '.tif';
+if isfield(in_struct,'FileExtension')
+    FileExtension = in_struct.FileExtension;
 end
 
-allFilenrs = [filenrs{:}];
-nImages = numel(allFilenrs);
 
-meta = this.metaData;
-DAPIChannel =meta.nuclearChannel;
-findColoniesParameters = this.processingParameters.clparameters;
+SortBy = 'date';
+if isfield(in_struct,'SortBy')
+    SortBy = in_struct.SortBy;
+end
 
 
+%%
+
+
+filePattern = fullfile(InputPath,['**/*',FileExtension]);
+fileList = dir(filePattern);
+T = struct2table(fileList);
+sortedT = sortrows(T,SortBy);
+fileList = table2struct(sortedT);
+
+
+meta = this.meta_data;
+DAPIChannel = meta.nuclearChannel;
+findColoniesParameters = this.processing_parameters.clparameters;
 adjustmentFactor = [];
 
-colDir = this.processedImageDirectory;
 
 colNow = 1; %counter for the number of colonies
 colonies = []; % to store all colonies
+nImages = numel(fileList);
 for mm = 1:nImages %main processing loop
     
-    disp(['Image ' int2str(mm)])
+    disp(['Image ' int2str(mm) '      ' fileList(mm).name])
     %find the condition
-    f = @(x) sum(ismember(x,allFilenrs(mm)));
-    cond = find(cellfun(f,filenrs));
+%     f = @(x) sum(ismember(x,allFilenrs(mm)));
+%     cond = find(cellfun(f,filenrs));
     
-    imgfile = fullfile(colDir,[prefix num2str(allFilenrs(mm)) ext]);
+    imgfile = fullfile(InputPath,fileList(mm).name);
 
     %img = zeros([meta.ySize, meta.xSize, meta.nChannels],'uint16');
     clear img;
@@ -64,11 +82,15 @@ for mm = 1:nImages %main processing loop
         % store the ID so the colony object knows its position in the
         % array (used to then load the image etc)
         newColonies(coli).setID(colNow);
-        newColonies(coli).condition = cond;
+        coordinateAux = regexp(fileList(mm).name,'\d*','Match');
+        newColonies(coli).plate = str2num(coordinateAux{1});
+        newColonies(coli).well = str2num(coordinateAux{2});
+        newColonies(coli).coordinate = [newColonies(coli).plate,newColonies(coli).well];
+        newColonies(coli).condition = this.cond{1,newColonies(coli).plate}{1,newColonies(coli).well};
+        newColonies(coli).condition_idx = this.cond_idx{1,newColonies(coli).plate}{1,newColonies(coli).well};
+        newColonies(coli).dataChannels = this.stain{1,newColonies(coli).plate}{1,newColonies(coli).well};
         
         
-        %newColonies(coli).well = this.imageNameStruct.well(mm);
-        %newColonies(coli).plate=this.imageNameStruct.plate(mm);
         b = newColonies(coli).boundingBox;
         colnucmask = mask(b(3):b(4),b(1):b(2));
 
@@ -95,7 +117,9 @@ for mm = 1:nImages %main processing loop
     colonies = [colonies, newColonies];
 end
 this.data = colonies;
+disp('All done')
 end
+
 
 function preview= makePreview(img,mask,cleanmask,meta,colonies)
 
@@ -122,7 +146,7 @@ end
 % make overview image of results of this function
 maskPreview = imresize(mask, [size(preview,1) size(preview,2)]);
 cleanmaskPreview = imresize(cleanmask, [size(preview,1) size(preview,2)]);
-maskPreviewRGB = cat(3,maskPreview,cleanmaskPreview,0*maskPreview);
+maskPreviewRGB = cat(3,maskPreview,cleanmaskPreview,0*maskPreview); % red -lost during cleaning; green -gain during cleaning
 scale = mean(size(mask)./[size(preview,1) size(preview,2)]);
 
 figure(1),
