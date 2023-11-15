@@ -4,7 +4,7 @@ classdef Experiment < handle
         meta_data % appropriate metadata object.
         maxpro_image_directory
         raw_image_directory
-        experiment_type % Standard (std) or micropattern (mp)
+        experiment_type % standard (std) or micropattern (mp)
 %         imageNameStruct
         processing_parameters %for storing image processing
         % added by Siqi
@@ -15,6 +15,7 @@ classdef Experiment < handle
         stain 
         stain_idx
         images_per_well
+        split_folder_time_info % during live cell imaging, sometimes need to stop in the middle, each will create a folder, [beginning time, interval;...]
     end
     methods
         %constructor
