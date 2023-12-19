@@ -1,122 +1,123 @@
-function processColonyMovies(this)
-%process a live cell imaging micropatterning experiment. assumes one colony
-%per movie
+function processColonyMovies(this,InputPath,varargin)
+% process a live cell imaging micropatterning experiment. assumes one colony per movie
+%%
 
-meta = this.metaData;
-DAPIChannel =meta.nuclearChannel;
-findColoniesParameters = this.processingParameters.clparameters;
+in_struct = varargin2parameter(varargin);
 
-adjustmentFactor = this.processingParameters.adjustmentFactor;
 
-nImages = length(this.imageNameStruct.well);
-
-if isempty(this.processedImageDirectory)
-    this.processedImageDirectory = fullfile(this.rawImageDirectory,'colonies');
+if ~exist('InputPath','var')
+    InputPath = this.maxpro_image_directory;
 end
 
-imgDir = this.rawImageDirectory;
 
-colDir = this.processedImageDirectory;
-if ~exist(colDir,'dir')
-    mkdir(colDir);
+FileExtension = '.tif';
+if isfield(in_struct,'FileExtension')
+    FileExtension = in_struct.FileExtension;
 end
 
-for mm = 1:nImages %main processing loop
 
-    imgfile = this.getFileNameFromStruct(mm);
-
-    rr = bfGetReader(fullfile(imgDir, imgfile));
-
-    %img = zeros([meta.ySize, meta.xSize, meta.nChannels],'uint16');
-    %
-    img = zeros(rr.getSizeY,rr.getSizeX,meta.nChannels);
-
-    for ci = 1:meta.nChannels
-        img(:,:,ci) = bfGetPlaneAtZCT(rr,1,ci,1);
-    end
+%%
+meta = this.meta_data;
+DAPIChannel = meta.nuclearChannel;
+findColoniesParameters = this.processing_parameters.clparameters;
+adjustmentFactor = this.processing_parameters.adjustmentFactor;
+Stain = this.stain;
+time_info = this.split_folder_time_info;
+FolderNum = max(size(time_info,1),1);
 
 
-    disp('determine threshold');
-    forIlim = img(:,:,DAPIChannel);
-    t = thresholdMP(forIlim, adjustmentFactor);
-
-    if isfield(this.processingParameters,'minThresh') && t < this.processingParameters.minThresh
-        t = this.processingParameters.minThresh;
-    end
-
-    mask = forIlim > t;
-
-    disp('find colonies');
-    %actually finds the colonies
-    tic
-    [newColonies, cleanmask] = findColonies(mask, [], meta, findColoniesParameters);
-
-    % channels to save to individual images
-    % if ~exist(colDir,'dir')
-    %     mkdir(colDir);
-    % end
-
-    if numel(newColonies) > 1
-        disp('Error: only one colony per image permitted in processColonyMovies')
-    end
-
-
-
-
-    % store the ID so the colony object knows its position in the
-    % array (used to then load the image etc)
-    newColonies.setID(mm);
-    newColonies.well = this.imageNameStruct.well(mm);
-    newColonies.plate=this.imageNameStruct.plate(mm);
-    b = newColonies.boundingBox;
-    colnucmask = mask(b(3):b(4),b(1):b(2));
-
-    for tt = 1:meta.nTime
-        %     b(1:2) = b(1:2) - double(xmin - 1);
-        %     b(3:4) = b(3:4) - double(ymin - 1);
-
-        if tt  > 1 %get the image of next time point
-            for ci = 1:meta.nChannels
-                if rr.getSizeZ > 1&& rr.getSizeT == 1
-                    img(:,:,ci) = bfGetPlaneAtZCT(rr,tt,ci,1);
-                elseif rr.getSizeT > 1 && rr.getSizeZ == 1
-                    img(:,:,ci) = bfGetPlaneAtZCT(rr,1,ci,tt);
-                else
-                    disp('Error in processColonyMovies: getSizeZ and getSizeT cannot both be > 1')
+col_id = 0;
+for plateIdx = 1:size(Stain,2)
+    for wellIdx = 1:size(Stain{1,plateIdx},2)
+        filePattern = sprintf([InputPath '/**/*Plate%d*Well%02d*' FileExtension],plateIdx,wellIdx);
+        fileList = dir(filePattern);
+        ImagesPerWell = size(fileList,1)/FolderNum;
+        for objIdx = 1:ImagesPerWell
+            filePattern = sprintf([InputPath '/**/*Plate%d*Well%02d*Obj%02d*' FileExtension],plateIdx,wellIdx,objIdx);
+            fileList_obj = dir(filePattern);
+            col_id = col_id+1; nT = 0;
+            tic
+            for mm = 1:size(fileList_obj,1)
+                
+                imgfile = fileList_obj(mm).name;
+                disp(imgfile)
+                rr = bfGetReader(fullfile(InputPath, imgfile));
+                img = zeros(rr.getSizeY,rr.getSizeX,rr.getSizeC);
+                nC = rr.getSizeC;
+                for ci = 1:nC
+                    img(:,:,ci) = bfGetPlaneAtZCT(rr,1,ci,1);
                 end
+                
+                
+                disp('determine threshold');
+                forIlim = img(:,:,DAPIChannel);
+                t = thresholdMP(forIlim, adjustmentFactor);
+                if isfield(this.processing_parameters,'minThresh') && t < this.processing_parameters.minThresh
+                    t = this.processing_parameters.minThresh;
+                end
+                mask = forIlim > t;
+                
+                
+                disp('find colonies');
+                %actually finds the colonies
+                [newColonies, cleanmask] = findColonies(mask, [], meta, findColoniesParameters);
+                if numel(newColonies) > 1
+                    disp('Error: only one colony per image permitted in processColonyMovies')
+                end
+                
+                % store the ID so the colony object knows its position in the
+                % array (used to then load the image etc)
+                newColonies.setID(col_id);
+                newColonies.well = wellIdx;
+                newColonies.plate = plateIdx;
+                b = newColonies.boundingBox;
+                colnucmask = mask(b(3):b(4),b(1):b(2));
+                
+                for tt = 1:rr.getSizeT
+                    if tt  > 1 % get the image of next time point
+                        for ci = 1:rr.getSizeC
+                            if rr.getSizeZ > 1 && rr.getSizeT == 1
+                                img(:,:,ci) = bfGetPlaneAtZCT(rr,tt,ci,1);
+                            elseif rr.getSizeT > 1 && rr.getSizeZ == 1
+                                img(:,:,ci) = bfGetPlaneAtZCT(rr,1,ci,tt);
+                            else
+                                disp('Error in processColonyMovies: getSizeZ and getSizeT cannot both be > 1')
+                            end
+                        end
+                    end
+                    colonyNow = copyObject(newColonies); % deep copy so we don't overwrite
+                    colimg = img(b(3):b(4),b(1):b(2), :);
+                    
+                    
+                    % make radial average
+                    colonyNow.makeRadialAvgNoMask(colimg, meta.colMargin, [],[],false)
+                    
+                    
+                    % display the preview
+                    if mm == 1 && tt == 1
+                        makePreview(img,mask,cleanmask,meta,newColonies,nC);
+                        colonies(col_id) = colonyNow;
+                    else
+                        if tt == 1
+                            makePreview(img,mask,cleanmask,meta,newColonies,nC);
+                            colonies(col_id).radialProfile(tt+nT) = colonyNow.radialProfile;
+                        else
+                            colonies(col_id).radialProfile(tt+nT) = colonyNow.radialProfile;
+                        end
+                    end
+                end
+                nT = nT+rr.getSizeT;
             end
+            toc
         end
-        colonyNow = copyObject(newColonies); %deep copy so we don't overwrite
-
-        colimg = img(b(3):b(4),b(1):b(2), :);
-
-        % write colony image
-        %newColonies(coli).saveImage(colimg, colDir);
-
-        % write DAPI separately for Ilastik
-        %colonies(coli).saveImage(colimg, colDir, DAPIChannel);
-
-
-        % make radial average
-        colonyNow.makeRadialAvgNoMask(colimg, meta.colMargin, [],[],false)
-
-
-        %display the preview
-        if tt == 1
-            makePreview(img,mask,cleanmask,meta,newColonies);
-            colonies(mm) = colonyNow;
-        else
-            colonies(mm).radialProfile(tt) = colonyNow.radialProfile;
-        end
-
     end
-    toc
-
 end
 this.data = colonies;
-end
+disp('Done')
+end                
 
-function preview= makePreview(img,mask,cleanmask,meta,colonies)
+
+function preview = makePreview(img,mask,cleanmask,meta,colonies,nC)
 
 previewSize = 512;
 % for preview (thumbnail)
@@ -131,7 +132,7 @@ xminprev = ceil(size(preview,2)*double(xmin)/meta.xSize);
 
 
 
-for ci = 1:meta.nChannels
+for ci = 1:nC
     preview(yminprev:ymaxprev,xminprev:xmaxprev, ci) = ...
         imresize(img(:,:,ci),[ymaxprev-yminprev+1, xmaxprev-xminprev+1]);
     % rescale lookup for easy preview

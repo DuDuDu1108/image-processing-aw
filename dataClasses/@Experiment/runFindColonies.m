@@ -56,7 +56,7 @@ for mm = 1:nImages %main processing loop
     end
 
 
-    disp('determine threshold');
+    disp('determine threshold')
     forIlim = img(:,:,DAPIChannel);
     t = thresholdMP(forIlim, adjustmentFactor);
 
@@ -83,8 +83,8 @@ for mm = 1:nImages %main processing loop
         % array (used to then load the image etc)
         newColonies(coli).setID(colNow);
         coordinateAux = regexp(fileList(mm).name,'\d*','Match');
-        newColonies(coli).plate = str2num(coordinateAux{1});
-        newColonies(coli).well = str2num(coordinateAux{2});
+        newColonies(coli).plate = str2num(coordinateAux{3});
+        newColonies(coli).well = str2num(coordinateAux{4});
         newColonies(coli).coordinate = [newColonies(coli).plate,newColonies(coli).well];
         newColonies(coli).condition = this.cond{1,newColonies(coli).plate}{1,newColonies(coli).well};
         newColonies(coli).condition_idx = this.cond_idx{1,newColonies(coli).plate}{1,newColonies(coli).well};
@@ -116,8 +116,12 @@ for mm = 1:nImages %main processing loop
     end
     colonies = [colonies, newColonies];
 end
+
+
 this.data = colonies;
 disp('All done')
+
+
 end
 
 

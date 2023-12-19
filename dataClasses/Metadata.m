@@ -107,31 +107,35 @@ classdef Metadata
             adjustmentFactor = [];
         end
         
-        function this = setDefaultResolution(this,magnification)
+        function this = setDefaultResolution(this,magnification,zoom_value)
             
             if ~exist('magnification','var')
                 magnification = '20X';
             end
             
+            if ~exist('zoom_value','var')
+                zoom_value = 1;
+            end
+            
             switch magnification
                 case '10X'
-                    this.xres = 1.25;
-                    this.yres = 1.25;
+                    this.xres = 1.25/zoom_value;
+                    this.yres = 1.25/zoom_value;
                 case '20X'
-                    this.xres = 0.625;
-                    this.yres = 0.625;
+                    this.xres = 0.625/zoom_value;
+                    this.yres = 0.625/zoom_value;
                 case '30X'
-                    this.xres = 0.4167;
-                    this.yres = 0.4167;
+                    this.xres = 0.4167/zoom_value;
+                    this.yres = 0.4167/zoom_value;
                 case '40X'
-                    this.xres = 0.3125;
-                    this.yres = 0.3125;
+                    this.xres = 0.3125/zoom_value;
+                    this.yres = 0.3125/zoom_value;
                 case '60X'
-                    this.xres = 0.2083;
-                    this.yres = 0.2083;
+                    this.xres = 0.2083/zoom_value;
+                    this.yres = 0.2083/zoom_value;
                 case '100X'
-                    this.xres = 0.125;
-                    this.yres = 0.125;
+                    this.xres = 0.125/zoom_value;
+                    this.yres = 0.125/zoom_value;
             end
             
         end
