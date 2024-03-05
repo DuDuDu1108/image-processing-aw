@@ -43,18 +43,16 @@ nImages = numel(fileList);
 for mm = 1:nImages %main processing loop
     
     disp(['Image ' int2str(mm) '      ' fileList(mm).name])
-    %find the condition
-%     f = @(x) sum(ismember(x,allFilenrs(mm)));
-%     cond = find(cellfun(f,filenrs));
+    % find the condition
+    % f = @(x) sum(ismember(x,allFilenrs(mm)));
+    % cond = find(cellfun(f,filenrs));
     
     imgfile = fullfile(InputPath,fileList(mm).name);
-
-    %img = zeros([meta.ySize, meta.xSize, meta.nChannels],'uint16');
+    % img = zeros([meta.ySize, meta.xSize, meta.nChannels],'uint16');
     clear img;
     for ci = 1:meta.nChannels
         img(:,:,ci) = imread(imgfile,ci);
     end
-
 
     disp('determine threshold')
     forIlim = img(:,:,DAPIChannel);
@@ -63,7 +61,7 @@ for mm = 1:nImages %main processing loop
     mask = forIlim > t;
 
     disp('find colonies');
-    %actually finds the colonies
+    % actually finds the colonies
     tic
     [newColonies, cleanmask] = findColonies(mask, [], meta, findColoniesParameters);
     toc
@@ -96,7 +94,7 @@ for mm = 1:nImages %main processing loop
 
         %     b(1:2) = b(1:2) - double(xmin - 1);
         %     b(3:4) = b(3:4) - double(ymin - 1);
-        colimg = img(b(3):b(4),b(1):b(2), :);
+        colimg = img(b(3):b(4),b(1):b(2),:);
 
         % write colony image
         %newColonies(coli).saveImage(colimg, colDir);

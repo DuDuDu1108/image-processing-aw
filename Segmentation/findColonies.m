@@ -27,9 +27,9 @@ end
 
 colRadiusPixel = meta.colRadiiPixel;
 maxEccentricity = 0.65;
-%it is a problem to use colRadiusPixel here if colonies have not yet
-%been identified and could be of multiple sizes. maybe implement
-%min/max of colRadiusPixel in the future
+% it is a problem to use colRadiusPixel here if colonies have not yet
+% been identified and could be of multiple sizes. maybe implement
+% min/max of colRadiusPixel in the future
 if ~isfield(clparameters,'minArea') || isempty(clparameters.minArea)
     %    clparameters.minArea = floor(pi*min(colRadiusPixel).^2/3);
     clparameters.minArea = 1;
@@ -63,12 +63,11 @@ cleanmask = imfill(cleanmask,'holes');
 cleanmask = bwareaopen(cleanmask,clparameters.minArea);
 
 
-
 if clparameters.convhull
     cleanmask = bwconvhull(cleanmask);
 end
 
-%remove the colonies to get the mask of the wells
+% remove the colonies to get the mask of the wells
 wellmask = ~bwareaopen(cleanmask,clparameters.maxArea);
 
 % remove colonies that are not round
@@ -76,12 +75,11 @@ CC = bwconncomp(cleanmask);
 stats = regionprops(CC, 'Eccentricity', 'BoundingBox','Centroid');
 cleanmask(cat(1,CC.PixelIdxList{[stats.Eccentricity] > maxEccentricity})) = false;
 
-%labelled well image
+% labelled well image
 welllabel = bwlabel(wellmask);
 
 % find colonies
 %-----------------------
-
 goodColIdx = [stats.Eccentricity] < maxEccentricity;
 nColonies = sum(goodColIdx);
 if nColonies == 0
@@ -92,7 +90,13 @@ if nColonies == 0
 end
 
 % determine colony size
-bb = cat(1,stats.BoundingBox);
+bb = cat(1,stats.BoundingBox); % BoundingBox[xLeft,yTop,width,height]
+% show if the BoundingBox is correct
+% figure; imshow(cleanmask,[]); hold on;
+% for ii = 1:size(bb,1)
+%     x1 = bb(ii,1); y1 = bb(ii,2); w = bb(ii,3); h = bb(ii,4);
+%     rectangle('Position',[x1,y1,w,h],'EdgeColor','r','LineWidth',3)
+% end
 bb = bb(goodColIdx,:);
 linsize = max(bb(:,3:4),[],2);
 
@@ -108,7 +112,7 @@ end
 CM = cat(1,stats.Centroid);
 CM = CM([stats.Eccentricity] < maxEccentricity,:);
 
-%get wells
+% get wells
 well = welllabel(sub2ind(size(welllabel),floor(CM(:,2)),floor(CM(:,1))));
 
 % shift to absolute position
@@ -119,7 +123,7 @@ CM(:,2) = CM(:,2) + double(range(3) - 1);
 % meta.colRadii contains the small number of possible radii
 colRadii = zeros(size(colType));
 colRadiiMicron=colRadii;
-colRadii(colType > 0) = colRadiusPixel(colType(colType>0));
+colRadii(colType>0) = colRadiusPixel(colType(colType>0));
 colRadiiMicron(colType>0) = meta.colRadiiMicron(colType(colType>0));
 
 % sort by radius
@@ -143,9 +147,9 @@ contained = (colxmin > range(1)) & (colxmax < range(2)) &...
 if ~clparameters.checkcontained
     contained = true(length(contained),1);
 end
-%leads to trouble if you allow negative values here
+% leads to trouble if you allow negative values here
 colrange = [max(colxmin,range(1)) min(colxmax,range(2)) max(colymin,range(3)) min(colymax,range(4))];
-%colrange = [colxmin colxmax colymin colymax];
+% colrange = [colxmin colxmax colymin colymax];
 
 CM = CM(contained,:);
 colRadii = colRadii(contained);

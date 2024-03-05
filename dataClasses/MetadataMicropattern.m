@@ -33,8 +33,7 @@ classdef MetadataMicropattern < Metadata
                 return;
             end
             this.colRadiiPixel = this.colRadiiMicron/this.xres;
-
-
         end
+        
     end
 end
