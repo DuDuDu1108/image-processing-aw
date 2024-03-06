@@ -1,5 +1,5 @@
 function [radialMaskStack, edges] = makeRadialBinningMasks(...
-                        colRadiiPixel, colRadiiMicron, colMargin)
+                        colRadiiPixel, colRadiiMicron, colMargin, binWidthMicron)
     % returns a stack of radial masks for radial averaging w/o segmenting
     %
     % [radialMaskStack, edges] = makeRadialBinningMasks(colRadiiPixel, colRadiiMicron, colMargin)
@@ -22,7 +22,9 @@ function [radialMaskStack, edges] = makeRadialBinningMasks(...
     Rpixel = ceil(colRadiiPixel);
     
     % I want 5 micron wide bins (~1/2 cell diameter)
-    binWidthMicron = 5;
+    if ~exist('binWidthMicron','var')
+        binWidthMicron = 5;
+    end
     
     for i = 1:numel(Rpixel)
 

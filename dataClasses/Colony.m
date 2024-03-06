@@ -1,9 +1,9 @@
 classdef Colony < Position
     % Data class to store a stem cell colony
 
-    % ---------------------
-    % Idse Heemskerk, 2016
-    % ---------------------
+    % ----------------------------------------
+    % Idse Heemskerk, 2016 modified by Siqi Du
+    % ----------------------------------------
 
     properties
 
@@ -284,11 +284,10 @@ classdef Colony < Position
             end
         end
 
-        function makeRadialAvgNoSeg(this, colimg, colnucmask, colcytmask, colmargin, ti,thresh,subBackground)
+        function makeRadialAvgNoSeg(this, colimg, colnucmask, colcytmask, colmargin, binWidthMicron, ti, thresh, subBackground)
 
             % makeRadialAvgNoSeg(this, colimg, colnucmask, colcytmask, colmargin, ti)
             % colcytmask can be left empty
-            %
 
             if ~exist('ti','var') || isempty(ti)
                 ti = 1;
@@ -301,10 +300,14 @@ classdef Colony < Position
             if ~exist("subBackground",'var') || isempty(subBackground)
                 subBackground = true;
             end
+            
+            if ~exist('binWidthMicron','var') || isempty(binWidthMicron)
+                binWidthMicron = 5;
+            end
 
             % masks for radial averages
             [radialMaskStack, edges] = makeRadialBinningMasks(...
-                this.radiusPixel, this.radiusMicron, colmargin);
+                this.radiusPixel, this.radiusMicron, colmargin, binWidthMicron);
             % colType is used when multiple size colonies are processed
             % together, not here
             colType = 1;
@@ -359,6 +362,8 @@ classdef Colony < Position
                 colcytbinmask = radialMaskStack{colType}(:,:,ri) & colcytmask;
                 % we only want to measure if there is something there
                 npix = sum(sum((colnucmask | colcytmask) & radialMaskStack{colType}(:,:,ri)));
+                npixnuc = sum(sum(colnucmask & radialMaskStack{colType}(:,:,ri)));
+                npixcyt = sum(sum(colcytmask & radialMaskStack{colType}(:,:,ri)));
                 npixTot = sum(sum(radialMaskStack{colType}(:,:,ri)));
 
                 if npix/npixTot > 0.1
@@ -371,33 +376,33 @@ classdef Colony < Position
                         % min(imc(colmaskClean)) doubles the computatation time
 
                         if subBackground
-
                             imc = imc - min(imc(:));
-
                         end
-                        if thresh(ci) > 0
-                            colnucbinmaskUse = colnucbinmask & imc < thresh(ci);
-                        else
-                            colnucbinmaskUse = colnucbinmask;
+                        
+                        % nuc
+                        if npixnuc/npixTot > 0.1
+                            if thresh(ci) > 0
+                                colnucbinmaskUse = colnucbinmask & imc < thresh(ci);
+                            else
+                                colnucbinmaskUse = colnucbinmask;
+                            end
+                            imcbin = imc(colnucbinmaskUse);
+                            nucradavg(ri,ci) = mean(imcbin);
+                            nucradstd(ri,ci) = std(double(imcbin));
                         end
-
-                        imcbin = imc(colnucbinmaskUse);
-                        nucradavg(ri,ci) = mean(imcbin);
-                        nucradstd(ri,ci) = std(double(imcbin));
-
-
-                        if thresh(ci) > 0
-                            colcytbinmaskUse = colcytbinmask & imc < thresh(ci);
-                        else
-                            colcytbinmaskUse = colcytbinmask;
+                        
+                        % cyto
+                        if npixcyt/npixTot > 0.1
+                            if thresh(ci) > 0
+                                colcytbinmaskUse = colcytbinmask & imc < thresh(ci);
+                            else
+                                colcytbinmaskUse = colcytbinmask;
+                            end
+                            imcbin = imc(colcytbinmaskUse);
+                            cytradavg(ri,ci) = mean(imcbin);
+                            cytradstd(ri,ci) = std(double(imcbin));
                         end
-                        imcbin = imc(colcytbinmaskUse);
-
-                        cytradavg(ri,ci) = mean(imcbin);
-                        cytradstd(ri,ci) = std(double(imcbin));
                     end
-                    %                 else
-                    %                     fprintf('x');
                 end
             end
 

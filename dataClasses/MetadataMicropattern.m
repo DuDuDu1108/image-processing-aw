@@ -32,7 +32,14 @@ classdef MetadataMicropattern < Metadata
                 disp('Need to set .xres and .colRadiiMicron before running this function');
                 return;
             end
-            this.colRadiiPixel = this.colRadiiMicron/this.xres;
+            if isnumeric(this.colRadiiMicron)
+                this.colRadiiPixel = this.colRadiiMicron/this.xres;
+            elseif iscell(this.colRadiiMicron)
+                this.colRadiiPixel = cell(size(this.colRadiiMicron,1),size(this.colRadiiMicron,2));
+                for ii = 1:size(this.colRadiiMicron,2)
+                    this.colRadiiPixel{1,ii} = cellfun(@(x) {x/this.xres}, this.colRadiiMicron{1,ii});
+                end
+            end
         end
         
     end
